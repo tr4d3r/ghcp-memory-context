@@ -6,6 +6,11 @@ A Model Context Protocol (MCP) compliant memory server for GitHub Copilot Premiu
 
 This project implements a memory/context server that bridges **Taskmaster AI** (strategic planning) with **GitHub Copilot Premium** (execution), enabling persistent, cross-session context for complex development tasks.
 
+## Requirements
+
+- **Go 1.23.10 or later** (required for security patches)
+- SQLite 3.x (for local storage)
+
 ### Architecture
 
 - **MCP Memory Server**: Persistent context storage with RESTful API
@@ -59,6 +64,15 @@ go run cmd/server/main.go
 ## Development
 
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development guidelines.
+
+## Security
+
+This project maintains up-to-date dependencies to address security vulnerabilities:
+
+- **Go 1.23.10+**: Addresses [GO-2025-3750](https://pkg.go.dev/vuln/GO-2025-3750) - syscall vulnerability on Windows
+- **golang.org/x/net v0.38.0+**: Addresses [GO-2025-3595](https://pkg.go.dev/vuln/GO-2025-3595) - XSS vulnerability
+
+Run `govulncheck ./...` to check for any new vulnerabilities.
 
 ## License
 
