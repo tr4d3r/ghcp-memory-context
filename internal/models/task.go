@@ -10,8 +10,32 @@ import (
 
 var validate *validator.Validate
 
+// validateTaskStatus validates TaskStatus values
+func validateTaskStatus(fl validator.FieldLevel) bool {
+	status := TaskStatus(fl.Field().String())
+	return status == TaskStatusPending || status == TaskStatusInProgress ||
+		status == TaskStatusCompleted || status == TaskStatusBlocked ||
+		status == TaskStatusCancelled
+}
+
+// validateTaskPriority validates TaskPriority values
+func validateTaskPriority(fl validator.FieldLevel) bool {
+	priority := TaskPriority(fl.Field().String())
+	return priority == TaskPriorityLow || priority == TaskPriorityMedium ||
+		priority == TaskPriorityHigh || priority == TaskPriorityCritical
+}
+
 func init() {
 	validate = validator.New()
+	// Register custom validations if needed
+	if err := validate.RegisterValidation("taskstatus", validateTaskStatus); err != nil {
+		// Log error in production, panic in development
+		panic(err)
+	}
+	if err := validate.RegisterValidation("taskpriority", validateTaskPriority); err != nil {
+		// Log error in production, panic in development
+		panic(err)
+	}
 }
 
 // TaskStatus represents the current status of a task
@@ -29,10 +53,10 @@ const (
 type TaskPriority string
 
 const (
-	TaskPriorityLow    TaskPriority = "low"
-	TaskPriorityMedium TaskPriority = "medium"
-	TaskPriorityHigh   TaskPriority = "high"
-	TaskPritorityCritical TaskPriority = "critical"
+	TaskPriorityLow      TaskPriority = "low"
+	TaskPriorityMedium   TaskPriority = "medium"
+	TaskPriorityHigh     TaskPriority = "high"
+	TaskPriorityCritical TaskPriority = "critical"
 )
 
 // Task represents a task context object that extends BaseContext
@@ -44,24 +68,24 @@ type Task struct {
 	// Task-specific fields as defined in PRD
 	Title       string       `json:"title" validate:"required,min=1,max=200"`
 	Description string       `json:"description" validate:"max=1000"`
-	Status      TaskStatus   `json:"status" validate:"required,oneof=pending in_progress completed blocked cancelled"`
-	Priority    TaskPriority `json:"priority" validate:"required,oneof=low medium high critical"`
-	
+	Status      TaskStatus   `json:"status" validate:"required,taskstatus"`
+	Priority    TaskPriority `json:"priority" validate:"required,taskpriority"`
+
 	// Hierarchical structure
-	ParentID string   `json:"parent_id,omitempty" validate:"omitempty,uuid"`
-	Subtasks []*Task  `json:"subtasks,omitempty"`
-	
+	ParentID string  `json:"parent_id,omitempty" validate:"omitempty,uuid"`
+	Subtasks []*Task `json:"subtasks,omitempty"`
+
 	// Dependencies and relationships
 	Dependencies []string `json:"dependencies,omitempty" validate:"dive,uuid"`
-	
+
 	// Code references for linking to implementation
 	CodeRefs []CodeReference `json:"code_refs,omitempty"`
-	
+
 	// Assignment and estimation
-	Assignee     string        `json:"assignee,omitempty"`
-	EstimatedHours float64     `json:"estimated_hours,omitempty" validate:"min=0"`
-	ActualHours    float64     `json:"actual_hours,omitempty" validate:"min=0"`
-	
+	Assignee       string  `json:"assignee,omitempty"`
+	EstimatedHours float64 `json:"estimated_hours,omitempty" validate:"min=0"`
+	ActualHours    float64 `json:"actual_hours,omitempty" validate:"min=0"`
+
 	// Dates
 	DueDate     *time.Time `json:"due_date,omitempty"`
 	StartedAt   *time.Time `json:"started_at,omitempty"`
@@ -83,17 +107,17 @@ type CodeReference struct {
 func (t *Task) Validate() error {
 	// Set task type
 	t.Type = types.ContextTypeTask
-	
+
 	// Set default status if not provided
 	if t.Status == "" {
 		t.Status = TaskStatusPending
 	}
-	
+
 	// Set default priority if not provided
 	if t.Priority == "" {
 		t.Priority = TaskPriorityMedium
 	}
-	
+
 	// Set the Data field to a map representation for MCP compliance
 	t.Data = map[string]interface{}{
 		"title":        t.Title,
@@ -106,18 +130,14 @@ func (t *Task) Validate() error {
 		"assignee":     t.Assignee,
 		"due_date":     t.DueDate,
 	}
-	
+
 	// Validate base context first
 	if err := t.BaseContext.Validate(); err != nil {
 		return err
 	}
-	
+
 	// Use the global validator for task-specific validation
-	if err := validate.Struct(t); err != nil {
-		return err
-	}
-	
-	return nil
+	return validate.Struct(t)
 }
 
 // ToJSON marshals the Task to JSON
@@ -140,20 +160,18 @@ func NewTask(title, description string) *Task {
 			Scope:   types.ContextScopeLocal,
 			Version: "1.0.0",
 		},
-		Title:       title,
-		Description: description,
-		Status:      TaskStatusPending,
-		Priority:    TaskPriorityMedium,
-		Subtasks:    make([]*Task, 0),
+		Title:        title,
+		Description:  description,
+		Status:       TaskStatusPending,
+		Priority:     TaskPriorityMedium,
+		Subtasks:     make([]*Task, 0),
 		Dependencies: make([]string, 0),
-		CodeRefs:    make([]CodeReference, 0),
+		CodeRefs:     make([]CodeReference, 0),
 	}
-	
+
 	// Validate and set defaults
-	if err := task.Validate(); err != nil {
-		// Log error but continue - validation will be called again later
-	}
-	
+	_ = task.Validate() // Ignore error - validation will be called again later
+
 	return task
 }
 
@@ -169,7 +187,7 @@ func (t *Task) AddSubtask(subtask *Task) {
 	if subtask == nil {
 		return
 	}
-	
+
 	subtask.ParentID = t.ID
 	t.Subtasks = append(t.Subtasks, subtask)
 	t.UpdatedAt = time.Now()
@@ -196,7 +214,7 @@ func (t *Task) AddDependency(dependencyID string) {
 			return
 		}
 	}
-	
+
 	t.Dependencies = append(t.Dependencies, dependencyID)
 	t.UpdatedAt = time.Now()
 }
@@ -224,7 +242,7 @@ func (t *Task) SetStatus(status TaskStatus) {
 	oldStatus := t.Status
 	t.Status = status
 	t.UpdatedAt = time.Now()
-	
+
 	// Update status-specific timestamps
 	now := time.Now()
 	switch status {
@@ -279,7 +297,7 @@ func (t *Task) GetCompletionPercentage() float64 {
 		}
 		return 0.0
 	}
-	
+
 	completed := t.GetCompletedSubtasks()
 	return float64(completed) / float64(len(t.Subtasks)) * 100.0
 }

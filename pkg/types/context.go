@@ -102,11 +102,11 @@ const (
 
 // ContextRelationship defines relationships between context objects
 type ContextRelationship struct {
-	ID           string           `json:"id" validate:"required,uuid"`
-	FromID       string           `json:"from_id" validate:"required,uuid"`
-	ToID         string           `json:"to_id" validate:"required,uuid"`
-	Type         RelationshipType `json:"type" validate:"required"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
-	CreatedAt    time.Time        `json:"created_at"`
-	CreatedBy    string           `json:"created_by,omitempty"`
+	ID        string            `json:"id" validate:"required,uuid"`
+	FromID    string            `json:"from_id" validate:"required,uuid"`
+	ToID      string            `json:"to_id" validate:"required,uuid"`
+	Type      RelationshipType  `json:"type" validate:"required"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+	CreatedBy string            `json:"created_by,omitempty"`
 }
