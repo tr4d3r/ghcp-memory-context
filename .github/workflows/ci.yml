@@ -17,7 +17,7 @@ on:
 
 env:
   GO_VERSION: '1.23.10'
-  GOLANGCI_LINT_VERSION: 'v1.55.2'
+  GOLANGCI_LINT_VERSION: 'v1.62.2'
   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 jobs:
@@ -80,7 +80,10 @@ jobs:
       - name: Run tests
         run: |
           go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-          go test -bench=. -benchmem ./...
+
+      - name: Run benchmarks
+        if: runner.os != 'Windows'
+        run: go test -bench=. -benchmem ./...
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.go-version == env.GO_VERSION
