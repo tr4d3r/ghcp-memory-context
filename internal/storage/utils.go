@@ -141,3 +141,27 @@ func DefaultTime(t *time.Time, defaultValue time.Time) time.Time {
 	}
 	return *t
 }
+
+// NullStringPtr converts a string to sql.NullString (for string fields, not *string)
+func NullStringPtr(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
+}
+
+// NullTimePtr converts a *time.Time to sql.NullTime (for *time.Time fields)
+func NullTimePtr(t *time.Time) sql.NullTime {
+	if t == nil {
+		return sql.NullTime{Valid: false}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
+}
+
+// TimePtr converts sql.NullTime to *time.Time (for reading from db)
+func TimePtrFromNull(nt sql.NullTime) *time.Time {
+	if !nt.Valid {
+		return nil
+	}
+	return &nt.Time
+}
