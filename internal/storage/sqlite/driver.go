@@ -7,14 +7,16 @@ import (
 	"time"
 
 	"github.com/tr4d3r/ghcp-memory-context/internal/storage"
+	"github.com/tr4d3r/ghcp-memory-context/internal/storage/migrations"
 	_ "modernc.org/sqlite" // SQLite driver
 )
 
 // Driver implements the SQLite storage driver
 type Driver struct {
-	db     *sql.DB
-	config *storage.Config
-	dsn    string
+	db               *sql.DB
+	config           *storage.Config
+	dsn              string
+	migrationManager *migrations.Manager
 }
 
 // init registers the SQLite driver with the storage factory
@@ -135,6 +137,15 @@ func (d *Driver) Connect(ctx context.Context) error {
 		}
 	}
 
+	// Initialize migration manager
+	d.migrationManager = migrations.NewManager(d.db, d.config)
+
+	// Run auto-migrations if enabled
+	if err := d.migrationManager.AutoMigrate(ctx); err != nil {
+		d.db.Close()
+		return storage.NewStorageError("auto_migrate", "sqlite", "", err)
+	}
+
 	return nil
 }
 
@@ -198,4 +209,33 @@ func (d *Driver) GetConfig() *storage.Config {
 // GetDSN returns the data source name
 func (d *Driver) GetDSN() string {
 	return d.dsn
+}
+
+// GetMigrationManager returns the migration manager for advanced migration operations
+func (d *Driver) GetMigrationManager() *migrations.Manager {
+	return d.migrationManager
+}
+
+// MigrateUp migrates to the latest version
+func (d *Driver) MigrateUp(ctx context.Context) error {
+	if d.migrationManager == nil {
+		return storage.NewStorageError("migrate_up", "sqlite", "", fmt.Errorf("migration manager not initialized"))
+	}
+	return d.migrationManager.Up(ctx)
+}
+
+// MigrateDown rolls back one migration
+func (d *Driver) MigrateDown(ctx context.Context) error {
+	if d.migrationManager == nil {
+		return storage.NewStorageError("migrate_down", "sqlite", "", fmt.Errorf("migration manager not initialized"))
+	}
+	return d.migrationManager.Down(ctx)
+}
+
+// MigrationStatus returns the current migration status
+func (d *Driver) MigrationStatus(ctx context.Context) ([]*migrations.Migration, error) {
+	if d.migrationManager == nil {
+		return nil, storage.NewStorageError("migration_status", "sqlite", "", fmt.Errorf("migration manager not initialized"))
+	}
+	return d.migrationManager.Status(ctx)
 }

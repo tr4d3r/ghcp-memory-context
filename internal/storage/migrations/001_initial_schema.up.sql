@@ -153,17 +153,7 @@ CREATE INDEX idx_code_refs_task_id ON code_references(task_id);
 CREATE INDEX idx_code_refs_file_path ON code_references(file_path);
 CREATE INDEX idx_code_refs_commit_hash ON code_references(commit_hash);
 
--- Schema migrations table - tracks applied migrations
-CREATE TABLE schema_migrations (
-    version INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL,
-    applied_at DATETIME NOT NULL DEFAULT (datetime('now', 'utc')),
-    checksum TEXT
-);
-
--- Insert initial migration record
-INSERT INTO schema_migrations (version, filename, applied_at, checksum)
-VALUES (1, '001_initial_schema.up.sql', datetime('now', 'utc'), NULL);
+-- Note: schema_migrations table is managed by the migration system
 
 -- Create triggers to automatically update updated_at timestamps
 

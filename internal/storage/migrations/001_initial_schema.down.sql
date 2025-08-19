@@ -49,5 +49,4 @@ DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS context_objects;
 DROP TABLE IF EXISTS sessions;
 
--- Drop schema migrations table last
-DROP TABLE IF EXISTS schema_migrations;
+-- Note: schema_migrations table is managed by the migration system
