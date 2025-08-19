@@ -1,0 +1,52 @@
+# Gitleaks configuration for detecting secrets
+title = "GHCP Memory Context Server - Gitleaks Config"
+
+# Global settings
+[extend]
+# Use default gitleaks rules as base
+useDefault = true
+
+# Custom rules for project-specific patterns
+[[rules]]
+id = "mcp-api-key"
+description = "MCP API Key"
+regex = '''(?i)(mcp[_-]?api[_-]?key|mcp[_-]?token).{0,20}[:=]\s*['\"]?([a-zA-Z0-9]{32,})'''
+tags = ["api", "mcp"]
+
+[[rules]]
+id = "taskmaster-token"
+description = "TaskMaster AI Token"
+regex = '''(?i)(taskmaster[_-]?token|taskmaster[_-]?key).{0,20}[:=]\s*['\"]?([a-zA-Z0-9]{32,})'''
+tags = ["api", "taskmaster"]
+
+[[rules]]
+id = "database-url"
+description = "Database Connection String"
+regex = '''(?i)(database[_-]?url|db[_-]?url|connection[_-]?string).{0,20}[:=]\s*['\"]?(postgres|mysql|sqlite)://[^\s'"]+'''
+tags = ["database"]
+
+# Allowlist for false positives
+[allowlist]
+description = "Allowlist for legitimate patterns"
+regexes = [
+    # Test data and examples
+    '''(?i)example[_-]?key''',
+    '''(?i)test[_-]?token''',
+    '''(?i)dummy[_-]?secret''',
+    # UUIDs in test files
+    '''[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}''',
+]
+
+paths = [
+    # Test files
+    '''.*_test\.go$''',
+    '''.*test.*\.go$''',
+    '''.*/testdata/.*''',
+    # Example and template files
+    '''.*\.example$''',
+    '''.*\.template$''',
+    '''.*\.sample$''',
+    # Documentation
+    '''.*\.md$''',
+    '''.*\.txt$''',
+]
