@@ -76,3 +76,7 @@ node_modules/
 
 # Claude Code configuration
 .claude/
+
+
+# Notes
+.notes/*
