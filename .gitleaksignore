@@ -1,0 +1,2 @@
+# Ignore secrets baseline file - contains known false positives
+path:.secrets.baseline
