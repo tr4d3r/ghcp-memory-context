@@ -71,6 +71,8 @@ node_modules/
 # Task files
 # tasks.json
 # tasks/
+.taskmaster/
+
 
 # Claude Code configuration
-.claude/ 
+.claude/

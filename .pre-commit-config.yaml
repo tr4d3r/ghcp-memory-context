@@ -1,0 +1,54 @@
+# Pre-commit hooks for security and code quality
+# Install with: pip install pre-commit && pre-commit install
+# Run on all files: pre-commit run --all-files
+
+repos:
+  # Built-in hooks for basic checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Basic file checks
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      # Security-related checks
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+
+  # Go-specific formatting and linting
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      - id: go-vet
+      - id: go-mod-tidy
+      - id: go-unit-tests
+      - id: golangci-lint
+
+  # Secret detection
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Additional security scanning
+  - repo: https://github.com/zricethezav/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+
+# Configuration for specific hooks
+fail_fast: false
+default_stages: [pre-commit]
