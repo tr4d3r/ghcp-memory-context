@@ -60,7 +60,10 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"service":   "ghcp-memory-context",
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleRoot returns basic server information
@@ -78,7 +81,10 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleTasks handles task collection operations
@@ -133,7 +139,10 @@ func (s *Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleCreateTask creates a new task (placeholder implementation)
@@ -158,7 +167,10 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(task)
+	if err := json.NewEncoder(w).Encode(task); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleGetTask retrieves a specific task (placeholder implementation)
@@ -169,7 +181,10 @@ func (s *Server) handleGetTask(w http.ResponseWriter, r *http.Request, taskID st
 	task.Timestamp = time.Now().Unix()
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(task)
+	if err := json.NewEncoder(w).Encode(task); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleUpdateTask updates a specific task (placeholder implementation)
@@ -189,7 +204,10 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request, taskID
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleDeleteTask deletes a specific task (placeholder implementation)
@@ -201,7 +219,10 @@ func (s *Server) handleDeleteTask(w http.ResponseWriter, r *http.Request, taskID
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // Run starts the HTTP server with graceful shutdown
