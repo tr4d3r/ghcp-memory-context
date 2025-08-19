@@ -78,8 +78,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: |
-          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Run benchmarks
         if: runner.os != 'Windows'
