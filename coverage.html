@@ -1,0 +1,319 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>types: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/tr4d3r/ghcp-memory-context/pkg/types/context.go (28.6%)</option>
+				
+				<option value="file1">github.com/tr4d3r/ghcp-memory-context/pkg/types/validation.go (66.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package types
+
+import (
+        "encoding/json"
+        "time"
+)
+
+// ContextType represents the type of context object
+type ContextType string
+
+const (
+        ContextTypeTask ContextType = "task"
+        ContextTypeCode ContextType = "code"
+        ContextTypeChat ContextType = "chat"
+)
+
+// ContextScope defines whether context is local or shared
+type ContextScope string
+
+const (
+        ContextScopeLocal  ContextScope = "local"
+        ContextScopeShared ContextScope = "shared"
+)
+
+// BaseContext defines the core MCP-compliant context object structure
+// All context objects must implement this base schema
+type BaseContext struct {
+        // Required MCP fields
+        ID        string      `json:"id" validate:"required,uuid"`
+        Type      ContextType `json:"type" validate:"required,oneof=task code chat"`
+        Version   string      `json:"version" validate:"required,semver"`
+        Timestamp int64       `json:"timestamp" validate:"required"`
+        Data      interface{} `json:"data" validate:"required"`
+
+        // Extended metadata fields for extensibility
+        SessionID   string            `json:"session_id,omitempty" validate:"omitempty,uuid"`
+        ProjectID   string            `json:"project_id,omitempty" validate:"omitempty,uuid"`
+        Owner       string            `json:"owner,omitempty"`
+        Scope       ContextScope      `json:"scope" validate:"required,oneof=local shared"`
+        Permissions []string          `json:"permissions,omitempty"`
+        Metadata    map[string]string `json:"metadata,omitempty"`
+        Tags        []string          `json:"tags,omitempty"`
+
+        // Audit fields
+        CreatedAt time.Time `json:"created_at"`
+        UpdatedAt time.Time `json:"updated_at"`
+        CreatedBy string    `json:"created_by,omitempty"`
+        UpdatedBy string    `json:"updated_by,omitempty"`
+}
+
+// ContextObject is the interface that all context types must implement
+type ContextObject interface {
+        GetID() string
+        GetType() ContextType
+        GetVersion() string
+        GetTimestamp() int64
+        GetData() interface{}
+        Validate() error
+        ToJSON() ([]byte, error)
+        FromJSON([]byte) error
+}
+
+// Implement ContextObject interface for BaseContext
+func (bc *BaseContext) GetID() string <span class="cov0" title="0">{
+        return bc.ID
+}</span>
+
+func (bc *BaseContext) GetType() ContextType <span class="cov0" title="0">{
+        return bc.Type
+}</span>
+
+func (bc *BaseContext) GetVersion() string <span class="cov0" title="0">{
+        return bc.Version
+}</span>
+
+func (bc *BaseContext) GetTimestamp() int64 <span class="cov0" title="0">{
+        return bc.Timestamp
+}</span>
+
+func (bc *BaseContext) GetData() interface{} <span class="cov0" title="0">{
+        return bc.Data
+}</span>
+
+func (bc *BaseContext) ToJSON() ([]byte, error) <span class="cov8" title="1">{
+        return json.Marshal(bc)
+}</span>
+
+func (bc *BaseContext) FromJSON(data []byte) error <span class="cov8" title="1">{
+        return json.Unmarshal(data, bc)
+}</span>
+
+// RelationshipType defines types of relationships between context objects
+type RelationshipType string
+
+const (
+        RelationshipParentChild RelationshipType = "parent_child"
+        RelationshipDependsOn   RelationshipType = "depends_on"
+        RelationshipRelatedTo   RelationshipType = "related_to"
+        RelationshipBlocks      RelationshipType = "blocks"
+        RelationshipReferences  RelationshipType = "references"
+)
+
+// ContextRelationship defines relationships between context objects
+type ContextRelationship struct {
+        ID           string           `json:"id" validate:"required,uuid"`
+        FromID       string           `json:"from_id" validate:"required,uuid"`
+        ToID         string           `json:"to_id" validate:"required,uuid"`
+        Type         RelationshipType `json:"type" validate:"required"`
+        Metadata     map[string]string `json:"metadata,omitempty"`
+        CreatedAt    time.Time        `json:"created_at"`
+        CreatedBy    string           `json:"created_by,omitempty"`
+}</pre>
+		
+		<pre class="file" id="file1" style="display: none">package types
+
+import (
+        "fmt"
+        "regexp"
+        "time"
+
+        "github.com/go-playground/validator/v10"
+        "github.com/google/uuid"
+)
+
+var validate *validator.Validate
+
+func init() <span class="cov8" title="1">{
+        validate = validator.New()
+        
+        // Register custom validation functions
+        validate.RegisterValidation("uuid", validateUUID)
+        validate.RegisterValidation("semver", validateSemVer)
+}</span>
+
+// Validate performs validation on the BaseContext struct
+func (bc *BaseContext) Validate() error <span class="cov8" title="1">{
+        // Set timestamp if not provided
+        if bc.Timestamp == 0 </span><span class="cov8" title="1">{
+                bc.Timestamp = time.Now().Unix()
+        }</span>
+        
+        // Set created/updated timestamps if not provided
+        <span class="cov8" title="1">now := time.Now()
+        if bc.CreatedAt.IsZero() </span><span class="cov8" title="1">{
+                bc.CreatedAt = now
+        }</span>
+        <span class="cov8" title="1">if bc.UpdatedAt.IsZero() </span><span class="cov8" title="1">{
+                bc.UpdatedAt = now
+        }</span>
+        
+        // Generate UUID if not provided
+        <span class="cov8" title="1">if bc.ID == "" </span><span class="cov8" title="1">{
+                bc.ID = uuid.New().String()
+        }</span>
+        
+        // Set default version if not provided
+        <span class="cov8" title="1">if bc.Version == "" </span><span class="cov8" title="1">{
+                bc.Version = "1.0.0"
+        }</span>
+        
+        // Set default scope if not provided
+        <span class="cov8" title="1">if bc.Scope == "" </span><span class="cov8" title="1">{
+                bc.Scope = ContextScopeLocal
+        }</span>
+        
+        <span class="cov8" title="1">return validate.Struct(bc)</span>
+}
+
+// validateUUID checks if the value is a valid UUID
+func validateUUID(fl validator.FieldLevel) bool <span class="cov8" title="1">{
+        value := fl.Field().String()
+        if value == "" </span><span class="cov0" title="0">{
+                return true // Allow empty for omitempty fields
+        }</span>
+        <span class="cov8" title="1">_, err := uuid.Parse(value)
+        return err == nil</span>
+}
+
+// validateSemVer checks if the value is a valid semantic version
+func validateSemVer(fl validator.FieldLevel) bool <span class="cov8" title="1">{
+        value := fl.Field().String()
+        if value == "" </span><span class="cov0" title="0">{
+                return false
+        }</span>
+        
+        // Basic semver pattern: MAJOR.MINOR.PATCH
+        <span class="cov8" title="1">semverPattern := `^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$`
+        matched, err := regexp.MatchString(semverPattern, value)
+        return err == nil &amp;&amp; matched</span>
+}
+
+// ValidateContextObject validates any context object that implements the ContextObject interface
+func ValidateContextObject(obj ContextObject) error <span class="cov0" title="0">{
+        if obj == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("context object cannot be nil")
+        }</span>
+        
+        <span class="cov0" title="0">if obj.GetID() == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("context object ID cannot be empty")
+        }</span>
+        
+        <span class="cov0" title="0">if obj.GetType() == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("context object type cannot be empty")
+        }</span>
+        
+        <span class="cov0" title="0">if obj.GetVersion() == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("context object version cannot be empty")
+        }</span>
+        
+        <span class="cov0" title="0">if obj.GetTimestamp() &lt;= 0 </span><span class="cov0" title="0">{
+                return fmt.Errorf("context object timestamp must be positive")
+        }</span>
+        
+        <span class="cov0" title="0">return obj.Validate()</span>
+}</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

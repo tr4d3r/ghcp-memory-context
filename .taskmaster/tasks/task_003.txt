@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Build REST API Handlers
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Implement RESTful API endpoints for task and context operations
+# Details:
+Create API handlers for CRUD operations on tasks and context objects. Include filtering, validation, and error handling as specified in PRD section 4.1.
+
+# Test Strategy:
+
