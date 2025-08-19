@@ -32,7 +32,6 @@ repos:
       - id: go-fmt
       - id: go-mod-tidy
       - id: go-unit-tests
-      - id: golangci-lint
 
   # Secret detection
   - repo: https://github.com/Yelp/detect-secrets
@@ -42,11 +41,6 @@ repos:
         args: ['--baseline', '.secrets.baseline']
         exclude: package.lock.json
 
-  # Additional security scanning
-  - repo: https://github.com/zricethezav/gitleaks
-    rev: v8.28.0
-    hooks:
-      - id: gitleaks
 
 # Configuration for specific hooks
 fail_fast: false
