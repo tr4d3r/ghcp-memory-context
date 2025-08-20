@@ -2,272 +2,188 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"flag"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/tr4d3r/ghcp-memory-context/internal/models"
+	"github.com/tr4d3r/ghcp-memory-context/internal/api"
+	"github.com/tr4d3r/ghcp-memory-context/internal/mcp"
+	"github.com/tr4d3r/ghcp-memory-context/internal/storage/filestore"
 )
 
 // Server represents the MCP memory context server
 type Server struct {
-	port string
-	mux  *http.ServeMux
+	port      string
+	store     *filestore.FileStore
+	apiRouter *api.Router
 }
 
 // NewServer creates a new server instance
-func NewServer(port string) *Server {
+func NewServer(port string, dataDir string) *Server {
 	if port == "" {
 		port = "8080"
 	}
 
-	s := &Server{
-		port: port,
-		mux:  http.NewServeMux(),
+	if dataDir == "" {
+		dataDir = "./data"
 	}
 
-	s.setupRoutes()
-	return s
-}
-
-// setupRoutes configures the HTTP routes
-func (s *Server) setupRoutes() {
-	// Health check endpoint
-	s.mux.HandleFunc("/health", s.handleHealth)
-
-	// API endpoints
-	s.mux.HandleFunc("/api/v1/tasks", s.handleTasks)
-	s.mux.HandleFunc("/api/v1/tasks/", s.handleTaskByID)
-
-	// Root endpoint with basic info
-	s.mux.HandleFunc("/", s.handleRoot)
-}
-
-// handleHealth returns server health status
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	response := map[string]interface{}{
-		"status":    "healthy",
-		"timestamp": time.Now().Unix(),
-		"version":   "1.0.0",
-		"service":   "ghcp-memory-context",
+	// Initialize file store
+	store := filestore.NewFileStore(dataDir)
+	if err := store.Initialize(); err != nil {
+		log.Fatalf("Failed to initialize storage: %v", err)
 	}
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
+	// Create API router with the store
+	apiRouter := api.NewRouter(store)
+
+	return &Server{
+		port:      port,
+		store:     store,
+		apiRouter: apiRouter,
 	}
 }
 
-// handleRoot returns basic server information
-func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+// Start starts the HTTP server
+func (s *Server) Start() error {
+	// Setup routes
+	handler := s.apiRouter.SetupRoutes()
 
-	response := map[string]interface{}{
-		"name":        "GHCP Memory Context Server",
-		"description": "MCP-compliant memory server for GitHub Copilot Premium integration",
-		"version":     "1.0.0",
-		"endpoints": []string{
-			"/health",
-			"/api/v1/tasks",
-		},
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-}
-
-// handleTasks handles task collection operations
-func (s *Server) handleTasks(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGetTasks(w, r)
-	case http.MethodPost:
-		s.handleCreateTask(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// handleTaskByID handles individual task operations
-func (s *Server) handleTaskByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	// Extract task ID from path
-	taskID := r.URL.Path[len("/api/v1/tasks/"):]
-	if taskID == "" {
-		http.Error(w, "Task ID is required", http.StatusBadRequest)
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGetTask(w, r, taskID)
-	case http.MethodPut:
-		s.handleUpdateTask(w, r, taskID)
-	case http.MethodDelete:
-		s.handleDeleteTask(w, r, taskID)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// handleGetTasks returns a list of tasks (placeholder implementation)
-func (s *Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
-	// Create a sample task for demonstration
-	sampleTask := models.NewTask("Sample Task", "This is a sample task for the MCP memory server")
-	sampleTask.ID = "550e8400-e29b-41d4-a716-446655440000"
-	sampleTask.Timestamp = time.Now().Unix()
-
-	tasks := []*models.Task{sampleTask}
-
-	response := map[string]interface{}{
-		"tasks": tasks,
-		"count": len(tasks),
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-}
-
-// handleCreateTask creates a new task (placeholder implementation)
-func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
-	var taskData struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&taskData); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	task := models.NewTask(taskData.Title, taskData.Description)
-	task.ID = fmt.Sprintf("task-%d", time.Now().Unix())
-	task.Timestamp = time.Now().Unix()
-
-	if err := task.Validate(); err != nil {
-		http.Error(w, fmt.Sprintf("Validation error: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(task); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-}
-
-// handleGetTask retrieves a specific task (placeholder implementation)
-func (s *Server) handleGetTask(w http.ResponseWriter, r *http.Request, taskID string) {
-	// In a real implementation, this would query the database
-	task := models.NewTask("Retrieved Task", "This task was retrieved by ID")
-	task.ID = taskID
-	task.Timestamp = time.Now().Unix()
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(task); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-}
-
-// handleUpdateTask updates a specific task (placeholder implementation)
-func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request, taskID string) {
-	var updates map[string]interface{}
-
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	// In a real implementation, this would update the database
-	response := map[string]interface{}{
-		"id":      taskID,
-		"message": "Task updated successfully",
-		"updates": updates,
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-}
-
-// handleDeleteTask deletes a specific task (placeholder implementation)
-func (s *Server) handleDeleteTask(w http.ResponseWriter, r *http.Request, taskID string) {
-	// In a real implementation, this would delete from the database
-	response := map[string]interface{}{
-		"id":      taskID,
-		"message": "Task deleted successfully",
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-}
-
-// Run starts the HTTP server with graceful shutdown
-func (s *Server) Run() error {
 	server := &http.Server{
-		Addr:    ":" + s.port,
-		Handler: s.mux,
+		Addr:         ":" + s.port,
+		Handler:      handler,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
-	// Setup graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	log.Printf("Starting memory context server on port %s", s.port)
+	log.Printf("Data directory initialized")
+	log.Printf("API endpoints available:")
+	log.Printf("  - GET  /health")
+	log.Printf("  - GET  /entities")
+	log.Printf("  - POST /entities")
+	log.Printf("  - GET  /entities/{name}")
+	log.Printf("  - POST /memory/remember")
+	log.Printf("  - GET  /memory/recall")
+	log.Printf("  - GET  /memory/search")
+	log.Printf("  - GET  /relations")
+	log.Printf("  - GET  /mcp/resources")
+	log.Printf("  - POST /mcp/tools/remember_fact")
+	log.Printf("  - POST /mcp/tools/recall_facts")
+	log.Printf("  - POST /mcp/tools/search_memory")
 
+	// Start server in a goroutine
 	go func() {
-		log.Printf("Starting GHCP Memory Context Server on port %s", s.port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
 	}()
 
-	<-stop
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
 	log.Println("Shutting down server...")
 
+	// Give outstanding requests 30 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Server shutdown error: %v", err)
+		log.Printf("Server forced to shutdown: %v", err)
 		return err
 	}
 
-	log.Println("Server stopped")
+	log.Println("Server exited")
 	return nil
 }
 
 func main() {
-	// Get port from environment variable or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Parse command line flags
+	var mcpStdio bool
+	var port string
+	var dataDir string
+	var showVersion bool
+	var showHelp bool
+
+	flag.BoolVar(&mcpStdio, "mcp-stdio", false, "Run in MCP stdio mode for integration with MCP clients")
+	flag.StringVar(&port, "port", "", "Server port (default: 8080, env: PORT)")
+	flag.StringVar(&dataDir, "data-dir", "", "Data storage directory (default: ./.memory-context, env: DATA_DIR)")
+	flag.BoolVar(&showVersion, "version", false, "Show version information")
+	flag.BoolVar(&showHelp, "help", false, "Show help information")
+	flag.Parse()
+
+	if showVersion {
+		log.Println("GHCP Memory Context Server v1.0.0")
+		return
 	}
 
-	// Create and run server
-	server := NewServer(port)
-	if err := server.Run(); err != nil {
-		log.Fatalf("Server error: %v", err)
+	if showHelp {
+		log.Println("GHCP Memory Context Server - Persistent memory for AI assistants")
+		log.Println("")
+		log.Println("Usage:")
+		log.Println("  ghcp-memory-context [options]")
+		log.Println("")
+		log.Println("Options:")
+		flag.PrintDefaults()
+		log.Println("")
+		log.Println("Examples:")
+		log.Println("  ghcp-memory-context                    # Start HTTP server")
+		log.Println("  ghcp-memory-context --mcp-stdio        # Start MCP stdio server")
+		log.Println("  ghcp-memory-context --port 3000        # Custom port")
+		log.Println("  ghcp-memory-context --data-dir /path   # Custom data directory")
+		return
+	}
+
+	// Get configuration from environment variables if not set via flags
+	if port == "" {
+		port = os.Getenv("PORT")
+	}
+	if dataDir == "" {
+		dataDir = os.Getenv("DATA_DIR")
+	}
+
+	// Handle legacy positional argument for data directory
+	if dataDir == "" && len(flag.Args()) > 0 {
+		dataDir = flag.Args()[0]
+	}
+
+	// Ensure data directory is absolute
+	if dataDir != "" {
+		absPath, err := filepath.Abs(dataDir)
+		if err != nil {
+			log.Fatalf("Invalid data directory path: %v", err)
+		}
+		dataDir = absPath
+	} else {
+		dataDir = "./.memory-context"
+	}
+
+	// Initialize storage
+	store := filestore.NewFileStore(dataDir)
+	if err := store.Initialize(); err != nil {
+		log.Fatalf("Failed to initialize storage: %v", err)
+	}
+
+	if mcpStdio {
+		// Run MCP stdio server
+		log.Printf("Starting MCP stdio server (data directory: %s)", dataDir)
+		mcpServer := mcp.NewStdioServer(store)
+		if err := mcpServer.Run(); err != nil {
+			log.Fatalf("MCP stdio server error: %v", err)
+		}
+	} else {
+		// Run HTTP server
+		server := NewServer(port, dataDir)
+		if err := server.Start(); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
 	}
 }

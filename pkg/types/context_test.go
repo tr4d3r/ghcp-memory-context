@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestBaseContext_Validation(t *testing.T) {
+func TestBaseContextValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		context BaseContext
@@ -61,7 +61,7 @@ func TestBaseContext_Validation(t *testing.T) {
 	}
 }
 
-func TestBaseContext_JSONSerialization(t *testing.T) {
+func TestBaseContextJSONSerialization(t *testing.T) {
 	original := BaseContext{
 		ID:        uuid.New().String(),
 		Type:      ContextTypeTask,

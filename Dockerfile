@@ -24,32 +24,47 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
-    -o mcp-server ./cmd/server
+    -o ghcp-memory-context ./cmd/server
 
-# Final stage - minimal image
-FROM scratch
+# Final stage - minimal image with shell for health checks
+FROM alpine:latest
 
-# Import ca-certificates from builder
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Install runtime dependencies
+RUN apk --no-cache add ca-certificates tzdata wget
 
-# Import timezone data
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+# Create non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
 
-# Import user/group files
-COPY --from=builder /etc/passwd /etc/passwd
+# Create data directory with proper permissions
+RUN mkdir -p /app/.memory-context && \
+    chown -R appuser:appgroup /app
 
 # Copy the binary
-COPY --from=builder /app/mcp-server /mcp-server
+COPY --from=builder /app/ghcp-memory-context /app/ghcp-memory-context
+
+# Make binary executable
+RUN chmod +x /app/ghcp-memory-context
 
 # Use unprivileged user
 USER appuser
 
+# Set working directory
+WORKDIR /app
+
+# Create volume for persistent data
+VOLUME ["/app/.memory-context"]
+
 # Expose port
 EXPOSE 8080
 
+# Set environment variables
+ENV PORT=8080
+ENV DATA_DIR=/app/.memory-context
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/mcp-server", "--health-check"]
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 # Run the binary
-ENTRYPOINT ["/mcp-server"]
+CMD ["./ghcp-memory-context"]
