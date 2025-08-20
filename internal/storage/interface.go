@@ -9,15 +9,15 @@ import (
 )
 
 // Storage defines the main interface for all storage operations
-// This abstraction allows us to swap storage backends (SQLite, PostgreSQL, etc.)
+// This abstraction allows us to swap storage backends (file-based, database, etc.)
 type Storage interface {
 	// Lifecycle methods
 	Connect(ctx context.Context) error
 	Close() error
 	Ping(ctx context.Context) error
 
-	// Task operations
-	TaskStore
+	// Entity operations
+	EntityStore
 
 	// Context operations
 	ContextStore
@@ -25,32 +25,45 @@ type Storage interface {
 	// Session operations
 	SessionStore
 
-	// Transaction support
+	// Transaction support (may not be applicable for file-based storage)
 	BeginTx(ctx context.Context) (Transaction, error)
 }
 
-// TaskStore defines operations for Task entities
-type TaskStore interface {
-	// CreateTask creates a new task in the database
-	CreateTask(ctx context.Context, task *models.Task) error
+// EntityStore defines operations for Entity storage
+type EntityStore interface {
+	// CreateEntity creates a new entity
+	CreateEntity(ctx context.Context, entity *models.Entity) error
 
-	// GetTask retrieves a task by ID
-	GetTask(ctx context.Context, id string) (*models.Task, error)
+	// GetEntity retrieves an entity by name
+	GetEntity(ctx context.Context, name string) (*models.Entity, error)
 
-	// UpdateTask updates an existing task
-	UpdateTask(ctx context.Context, task *models.Task) error
+	// UpdateEntity updates an existing entity
+	UpdateEntity(ctx context.Context, entity *models.Entity) error
 
-	// DeleteTask removes a task by ID
-	DeleteTask(ctx context.Context, id string) error
+	// DeleteEntity removes an entity by name
+	DeleteEntity(ctx context.Context, name string) error
 
-	// ListTasks retrieves tasks with optional filters
-	ListTasks(ctx context.Context, filter TaskFilter) ([]*models.Task, error)
+	// ListEntities retrieves entities, optionally filtered by type
+	ListEntities(ctx context.Context, entityType string) ([]*models.Entity, error)
 
-	// GetTasksByParent retrieves all subtasks for a parent task
-	GetTasksByParent(ctx context.Context, parentID string) ([]*models.Task, error)
+	// EntityExists checks if an entity exists
+	EntityExists(name string) bool
 
-	// GetTaskDependencies retrieves all tasks that depend on the given task
-	GetTaskDependencies(ctx context.Context, taskID string) ([]*models.Task, error)
+	// SearchObservations searches for observations across entities
+	SearchObservations(ctx context.Context, query string, entityType string) ([]SearchResult, error)
+
+	// GetRelations retrieves all relations
+	GetRelations(ctx context.Context) (*models.RelationSet, error)
+
+	// SaveRelations saves the relation set
+	SaveRelations(ctx context.Context, relations *models.RelationSet) error
+}
+
+// SearchResult represents a search result from observation queries
+type SearchResult struct {
+	EntityName  string             `json:"entityName"`
+	EntityType  string             `json:"entityType"`
+	Observation models.Observation `json:"observation"`
 }
 
 // ContextStore defines operations for generic context objects
@@ -92,7 +105,7 @@ type SessionStore interface {
 	CleanupExpiredSessions(ctx context.Context, olderThan time.Duration) error
 }
 
-// Transaction represents a database transaction
+// Transaction represents a storage transaction (may be no-op for file storage)
 type Transaction interface {
 	// Commit commits the transaction
 	Commit() error
@@ -100,8 +113,8 @@ type Transaction interface {
 	// Rollback rolls back the transaction
 	Rollback() error
 
-	// Task operations within transaction
-	TaskStore
+	// Entity operations within transaction
+	EntityStore
 
 	// Context operations within transaction
 	ContextStore
@@ -110,26 +123,18 @@ type Transaction interface {
 	SessionStore
 }
 
-// TaskFilter defines filtering options for task queries
-type TaskFilter struct {
-	// Filter by task fields
-	Status   *models.TaskStatus
-	Priority *models.TaskPriority
-	Owner    *string
-	Assignee *string
-
-	// Filter by relationships
-	ParentID        *string
-	HasSubtasks     *bool
-	HasDependencies *bool
+// EntityFilter defines filtering options for entity queries
+type EntityFilter struct {
+	// Filter by entity fields
+	EntityType *string
+	Owner      *string
 
 	// Filter by time ranges
 	CreatedAfter  *time.Time
 	CreatedBefore *time.Time
-	UpdatedAfter  *time.Time
-	UpdatedBefore *time.Time
-	DueAfter      *time.Time
-	DueBefore     *time.Time
+
+	// Search in observations
+	SearchQuery *string
 
 	// Pagination
 	Limit  int

@@ -124,18 +124,17 @@ func (s *Server) handleTaskByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleGetTasks returns a list of tasks (placeholder implementation)
+// handleGetTasks returns a list of entities (updated for entity model)
 func (s *Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
-	// Create a sample task for demonstration
-	sampleTask := models.NewTask("Sample Task", "This is a sample task for the MCP memory server")
-	sampleTask.ID = "550e8400-e29b-41d4-a716-446655440000"
-	sampleTask.Timestamp = time.Now().Unix()
+	// Create a sample entity for demonstration
+	sampleEntity := models.NewEntity("sample_memory", "example")
+	sampleEntity.AddObservation("This is a sample memory context entry")
 
-	tasks := []*models.Task{sampleTask}
+	entities := []*models.Entity{sampleEntity}
 
 	response := map[string]interface{}{
-		"tasks": tasks,
-		"count": len(tasks),
+		"entities": entities,
+		"count":    len(entities),
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -145,49 +144,50 @@ func (s *Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleCreateTask creates a new task (placeholder implementation)
+// handleCreateTask creates a new entity (updated for entity model)
 func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
-	var taskData struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
+	var entityData struct {
+		Name        string `json:"name"`
+		EntityType  string `json:"entityType"`
+		Observation string `json:"observation"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&taskData); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&entityData); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	task := models.NewTask(taskData.Title, taskData.Description)
-	task.ID = fmt.Sprintf("task-%d", time.Now().Unix())
-	task.Timestamp = time.Now().Unix()
+	entity := models.NewEntity(entityData.Name, entityData.EntityType)
+	if entityData.Observation != "" {
+		entity.AddObservation(entityData.Observation)
+	}
 
-	if err := task.Validate(); err != nil {
+	if err := entity.Validate(); err != nil {
 		http.Error(w, fmt.Sprintf("Validation error: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(task); err != nil {
+	if err := json.NewEncoder(w).Encode(entity); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 }
 
-// handleGetTask retrieves a specific task (placeholder implementation)
+// handleGetTask retrieves a specific entity (placeholder implementation)
 func (s *Server) handleGetTask(w http.ResponseWriter, r *http.Request, taskID string) {
-	// In a real implementation, this would query the database
-	task := models.NewTask("Retrieved Task", "This task was retrieved by ID")
-	task.ID = taskID
-	task.Timestamp = time.Now().Unix()
+	// In a real implementation, this would query the storage
+	entity := models.NewEntity("retrieved_entity", "example")
+	entity.AddObservation("This entity was retrieved by ID")
 
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(task); err != nil {
+	if err := json.NewEncoder(w).Encode(entity); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 }
 
-// handleUpdateTask updates a specific task (placeholder implementation)
+// handleUpdateTask updates a specific entity (placeholder implementation)
 func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request, taskID string) {
 	var updates map[string]interface{}
 
@@ -196,10 +196,10 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request, taskID
 		return
 	}
 
-	// In a real implementation, this would update the database
+	// In a real implementation, this would update the storage
 	response := map[string]interface{}{
 		"id":      taskID,
-		"message": "Task updated successfully",
+		"message": "Entity updated successfully",
 		"updates": updates,
 	}
 
