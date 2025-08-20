@@ -73,6 +73,8 @@ node_modules/
 # tasks/
 .taskmaster/
 
+# Memory context data
+.memory-context/
 
 # Claude Code configuration
 .claude/

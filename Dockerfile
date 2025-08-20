@@ -37,7 +37,7 @@ RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
 # Create data directory with proper permissions
-RUN mkdir -p /app/data && \
+RUN mkdir -p /app/.memory-context && \
     chown -R appuser:appgroup /app
 
 # Copy the binary
@@ -53,14 +53,14 @@ USER appuser
 WORKDIR /app
 
 # Create volume for persistent data
-VOLUME ["/app/data"]
+VOLUME ["/app/.memory-context"]
 
 # Expose port
 EXPOSE 8080
 
 # Set environment variables
 ENV PORT=8080
-ENV DATA_DIR=/app/data
+ENV DATA_DIR=/app/.memory-context
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

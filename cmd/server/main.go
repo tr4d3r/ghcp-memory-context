@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/tr4d3r/ghcp-memory-context/internal/api"
+	"github.com/tr4d3r/ghcp-memory-context/internal/mcp"
 	"github.com/tr4d3r/ghcp-memory-context/internal/storage/filestore"
 )
 
@@ -104,13 +106,53 @@ func (s *Server) Start() error {
 }
 
 func main() {
-	// Get configuration from environment variables
-	port := os.Getenv("PORT")
-	dataDir := os.Getenv("DATA_DIR")
+	// Parse command line flags
+	var mcpStdio bool
+	var port string
+	var dataDir string
+	var showVersion bool
+	var showHelp bool
 
-	// Allow custom data directory via command line
-	if len(os.Args) > 1 {
-		dataDir = os.Args[1]
+	flag.BoolVar(&mcpStdio, "mcp-stdio", false, "Run in MCP stdio mode for integration with MCP clients")
+	flag.StringVar(&port, "port", "", "Server port (default: 8080, env: PORT)")
+	flag.StringVar(&dataDir, "data-dir", "", "Data storage directory (default: ./.memory-context, env: DATA_DIR)")
+	flag.BoolVar(&showVersion, "version", false, "Show version information")
+	flag.BoolVar(&showHelp, "help", false, "Show help information")
+	flag.Parse()
+
+	if showVersion {
+		log.Println("GHCP Memory Context Server v1.0.0")
+		return
+	}
+
+	if showHelp {
+		log.Println("GHCP Memory Context Server - Persistent memory for AI assistants")
+		log.Println("")
+		log.Println("Usage:")
+		log.Println("  ghcp-memory-context [options]")
+		log.Println("")
+		log.Println("Options:")
+		flag.PrintDefaults()
+		log.Println("")
+		log.Println("Examples:")
+		log.Println("  ghcp-memory-context                    # Start HTTP server")
+		log.Println("  ghcp-memory-context --mcp-stdio        # Start MCP stdio server")
+		log.Println("  ghcp-memory-context --port 3000        # Custom port")
+		log.Println("  ghcp-memory-context --data-dir /path   # Custom data directory")
+		return
+	}
+
+	// Get configuration from environment variables if not set via flags
+	if port == "" {
+		port = os.Getenv("PORT")
+	}
+	if dataDir == "" {
+		dataDir = os.Getenv("DATA_DIR")
+	}
+
+	// Handle legacy positional argument for data directory
+	if dataDir == "" && len(flag.Args()) > 0 {
+		dataDir = flag.Args()[0]
 	}
 
 	// Ensure data directory is absolute
@@ -120,11 +162,28 @@ func main() {
 			log.Fatalf("Invalid data directory path: %v", err)
 		}
 		dataDir = absPath
+	} else {
+		dataDir = "./.memory-context"
 	}
 
-	// Create and start server
-	server := NewServer(port, dataDir)
-	if err := server.Start(); err != nil {
-		log.Fatalf("Server error: %v", err)
+	// Initialize storage
+	store := filestore.NewFileStore(dataDir)
+	if err := store.Initialize(); err != nil {
+		log.Fatalf("Failed to initialize storage: %v", err)
+	}
+
+	if mcpStdio {
+		// Run MCP stdio server
+		log.Printf("Starting MCP stdio server (data directory: %s)", dataDir)
+		mcpServer := mcp.NewStdioServer(store)
+		if err := mcpServer.Run(); err != nil {
+			log.Fatalf("MCP stdio server error: %v", err)
+		}
+	} else {
+		// Run HTTP server
+		server := NewServer(port, dataDir)
+		if err := server.Start(); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
 	}
 }
