@@ -51,13 +51,13 @@ func (fs *FileStore) Initialize() error {
 	fmt.Fprintf(os.Stderr, "[FileStore] Entities directory: %s\n", fs.entitiesDir)
 
 	// Create entities directory
-	if err := os.MkdirAll(fs.entitiesDir, 0755); err != nil {
+	if err := os.MkdirAll(fs.entitiesDir, 0750); err != nil {
 		return fmt.Errorf("failed to create entities directory: %w", err)
 	}
 
 	// Create relations directory
 	relationsDir := filepath.Dir(fs.relationsFile)
-	if err := os.MkdirAll(relationsDir, 0755); err != nil {
+	if err := os.MkdirAll(relationsDir, 0750); err != nil {
 		return fmt.Errorf("failed to create relations directory: %w", err)
 	}
 
