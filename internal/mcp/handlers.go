@@ -10,8 +10,11 @@ import (
 
 // handleRememberFact implements the remember_fact tool
 func (s *StdioServer) handleRememberFact(ctx context.Context, args map[string]interface{}) CallToolResult {
+	s.logToStderr("handleRememberFact called with args: %v", args)
+
 	entityName, ok := args["entityName"].(string)
 	if !ok || entityName == "" {
+		s.logToStderr("Error: entityName is missing or empty")
 		return CallToolResult{
 			Content: []ToolContent{{Type: "text", Text: "Error: entityName is required"}},
 			IsError: true,
@@ -20,6 +23,7 @@ func (s *StdioServer) handleRememberFact(ctx context.Context, args map[string]in
 
 	observation, ok := args["observation"].(string)
 	if !ok || observation == "" {
+		s.logToStderr("Error: observation is missing or empty")
 		return CallToolResult{
 			Content: []ToolContent{{Type: "text", Text: "Error: observation is required"}},
 			IsError: true,
@@ -29,13 +33,18 @@ func (s *StdioServer) handleRememberFact(ctx context.Context, args map[string]in
 	entityType, _ := args["entityType"].(string)
 	source, _ := args["source"].(string)
 
+	s.logToStderr("Processing: entityName=%s, entityType=%s, observation=%s, source=%s",
+		entityName, entityType, observation, source)
+
 	// Get or create entity
 	var entity *models.Entity
 	var err error
 
 	if s.store.EntityExists(entityName) {
+		s.logToStderr("Entity exists, loading: %s", entityName)
 		entity, err = s.store.GetEntity(ctx, entityName)
 		if err != nil {
+			s.logToStderr("Failed to get entity: %v", err)
 			return CallToolResult{
 				Content: []ToolContent{{Type: "text", Text: "Error: Failed to get entity"}},
 				IsError: true,
@@ -45,8 +54,10 @@ func (s *StdioServer) handleRememberFact(ctx context.Context, args map[string]in
 		if entityType == "" {
 			entityType = "memory"
 		}
+		s.logToStderr("Creating new entity: %s (type: %s)", entityName, entityType)
 		entity = models.NewEntity(entityName, entityType)
 		if err := s.store.CreateEntity(ctx, entity); err != nil {
+			s.logToStderr("Failed to create entity: %v", err)
 			return CallToolResult{
 				Content: []ToolContent{{Type: "text", Text: "Error: Failed to create entity"}},
 				IsError: true,
@@ -57,17 +68,22 @@ func (s *StdioServer) handleRememberFact(ctx context.Context, args map[string]in
 	// Add observation
 	if source != "" {
 		entity.AddObservationWithSource(observation, source)
+		s.logToStderr("Added observation with source")
 	} else {
 		entity.AddObservation(observation)
+		s.logToStderr("Added observation without source")
 	}
 
+	s.logToStderr("Updating entity with %d observations", entity.GetObservationCount())
 	if err := s.store.UpdateEntity(ctx, entity); err != nil {
+		s.logToStderr("Failed to update entity: %v", err)
 		return CallToolResult{
 			Content: []ToolContent{{Type: "text", Text: "Error: Failed to update entity"}},
 			IsError: true,
 		}
 	}
 
+	s.logToStderr("Successfully saved entity to storage")
 	return CallToolResult{
 		Content: []ToolContent{{
 			Type: "text",

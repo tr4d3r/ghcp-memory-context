@@ -99,7 +99,22 @@ func (s *StdioServer) handleInitialize(request MCPRequest) *MCPResponse {
 				ListChanged: false,
 			},
 		},
-		Instructions: "Memory context server for persistent AI assistant memory. Use remember_fact to store information, recall_facts to retrieve it, and search_memory to find relevant context.",
+		Instructions: `Memory Context Server - Persistent AI Assistant Memory
+
+Natural language patterns:
+• "Remember that..." → stores facts via remember_fact
+• "What do you know about..." → retrieves via recall_facts
+• "Search memory for..." → searches via search_memory
+
+Quick tips:
+• Facts persist across all sessions
+• Organize with entity types: user, project, guideline, pattern, decision
+• Use natural conversational language - the AI will translate to appropriate tools
+
+Examples:
+• "Remember that the user prefers TypeScript"
+• "What do you know about the project architecture?"
+• "Search memory for database configuration"`,
 	}
 
 	return &MCPResponse{

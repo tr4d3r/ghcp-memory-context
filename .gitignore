@@ -83,3 +83,4 @@ node_modules/
 # Notes
 .notes/*
 bin/
+ghcp-memory-context

@@ -47,6 +47,9 @@ func NewFileStore(baseDir string) *FileStore {
 
 // Initialize creates the necessary directory structure
 func (fs *FileStore) Initialize() error {
+	fmt.Fprintf(os.Stderr, "[FileStore] Initializing with base directory: %s\n", fs.baseDir)
+	fmt.Fprintf(os.Stderr, "[FileStore] Entities directory: %s\n", fs.entitiesDir)
+
 	// Create entities directory
 	if err := os.MkdirAll(fs.entitiesDir, 0755); err != nil {
 		return fmt.Errorf("failed to create entities directory: %w", err)
@@ -66,6 +69,7 @@ func (fs *FileStore) Initialize() error {
 		}
 	}
 
+	fmt.Fprintf(os.Stderr, "[FileStore] Initialization complete\n")
 	return nil
 }
 
@@ -285,7 +289,13 @@ func (fs *FileStore) saveEntityFile(entity *models.Entity) error {
 		return fmt.Errorf("failed to marshal entity: %w", err)
 	}
 
-	return os.WriteFile(filePath, data, 0644)
+	fmt.Fprintf(os.Stderr, "[FileStore] Writing entity to file: %s\n", filePath)
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "[FileStore] Failed to write file: %v\n", err)
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "[FileStore] Successfully wrote %d bytes to %s\n", len(data), filePath)
+	return nil
 }
 
 func (fs *FileStore) loadEntityFile(name string) (*models.Entity, error) {

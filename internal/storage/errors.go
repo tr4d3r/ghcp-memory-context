@@ -16,20 +16,11 @@ var (
 	// ErrInvalidInput is returned when input validation fails
 	ErrInvalidInput = errors.New("invalid input")
 
-	// ErrDatabaseClosed is returned when attempting operations on a closed database
-	ErrDatabaseClosed = errors.New("database connection is closed")
-
-	// ErrTransactionClosed is returned when attempting operations on a closed transaction
-	ErrTransactionClosed = errors.New("transaction is closed")
-
-	// ErrConstraintViolation is returned when a database constraint is violated
-	ErrConstraintViolation = errors.New("constraint violation")
+	// ErrFileLocked is returned when a file is locked by another process
+	ErrFileLocked = errors.New("file is locked")
 
 	// ErrConcurrentUpdate is returned when a concurrent update conflict occurs
 	ErrConcurrentUpdate = errors.New("concurrent update conflict")
-
-	// ErrMigrationFailed is returned when a database migration fails
-	ErrMigrationFailed = errors.New("migration failed")
 
 	// ErrUnsupportedOperation is returned when an operation is not supported
 	ErrUnsupportedOperation = errors.New("unsupported operation")
@@ -84,9 +75,4 @@ func IsAlreadyExists(err error) bool {
 // IsInvalidInput checks if an error is an invalid input error
 func IsInvalidInput(err error) bool {
 	return errors.Is(err, ErrInvalidInput)
-}
-
-// IsConstraintViolation checks if an error is a constraint violation
-func IsConstraintViolation(err error) bool {
-	return errors.Is(err, ErrConstraintViolation)
 }

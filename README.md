@@ -259,10 +259,31 @@ curl -X POST http://localhost:8080/mcp/tools/remember_fact \
 
 ## VS Code & GitHub Copilot Premium Setup
 
+### Quick Start (Recommended)
+
+**For immediate VS Code integration:**
+
+1. **Build the binary**:
+   ```bash
+   make build
+   # OR: go build -o ghcp-memory-context cmd/server/main.go
+   ```
+
+2. **VS Code configuration ready**: The project includes `.vscode/mcp.json` pre-configured
+
+3. **Start VS Code** in this project directory:
+   ```bash
+   code .
+   ```
+
+4. **MCP server automatically starts** when VS Code loads
+
+5. **Memory persists** in `.memory-context/` directory (hidden, git-ignored)
+
 ### Prerequisites
 - **VS Code** with **GitHub Copilot** extension installed
 - **GitHub Copilot Premium** subscription (required for MCP support)
-- Memory Context Server running on `localhost:8080`
+- **Go 1.23.10+** for building from source
 
 ### Step 1: Install VS Code Extensions
 
@@ -272,54 +293,42 @@ code --install-extension GitHub.copilot
 code --install-extension GitHub.copilot-chat
 ```
 
-### Step 2: Configure MCP Integration
+### Step 2: Build Binary
 
-Create or update your VS Code settings to include the memory context server:
+```bash
+# Quick build
+make build
 
-**Method A: VS Code Settings JSON** (`.vscode/settings.json`)
-```json
-{
-  "github.copilot.enable": {
-    "*": true
-  },
-  "github.copilot.advanced": {
-    "mcp": {
-      "servers": {
-        "memory-context": {
-          "command": "http",
-          "args": ["http://localhost:8080/mcp"],
-          "env": {}
-        }
-      }
-    }
-  }
-}
+# Or manually
+go build -o ghcp-memory-context cmd/server/main.go
 ```
 
-**Method B: MCP Configuration File** (`.vscode/mcp.json`)
+### Step 3: VS Code MCP Configuration
+
+**Automatic (Recommended)**: Use the included `.vscode/mcp.json`:
 ```json
 {
   "mcpServers": {
     "memory-context": {
-      "command": "http",
-      "args": ["http://localhost:8080/mcp"],
+      "command": "./ghcp-memory-context",
+      "args": ["--mcp-stdio"],
       "description": "Persistent memory context for project development"
     }
   }
 }
 ```
 
-### Step 3: Start the Memory Server
-
-```bash
-# Start the memory context server
-./ghcp-memory-context
-
-# Or with Docker
-docker run -d -p 8080:8080 -v $(pwd)/data:/app/data tr4d3r/ghcp-memory-context:latest
-
-# Verify server is running
-curl http://localhost:8080/health
+**Manual Setup**: Create your own `.vscode/mcp.json` in any project:
+```json
+{
+  "mcpServers": {
+    "memory-context": {
+      "command": "/path/to/ghcp-memory-context",
+      "args": ["--mcp-stdio"],
+      "description": "Persistent memory context for project development"
+    }
+  }
+}
 ```
 
 ### Step 4: Verify Integration
@@ -347,24 +356,40 @@ Once configured, Copilot will automatically:
 @memory search: "authentication patterns"
 ```
 
+### Memory Storage Location
+
+- **Data Directory**: `.memory-context/` (hidden, project-specific)
+- **Structure**:
+  ```
+  .memory-context/
+  ├── entities/     # Individual entity JSON files
+  └── relations/    # Entity relationships
+  ```
+- **Git Ignored**: Memory data stays local to each developer
+- **Persistent**: Survives VS Code restarts and system reboots
+
 ### Troubleshooting VS Code Integration
 
 **Issue: Copilot not connecting to memory server**
-```bash
-# Check server status
-curl http://localhost:8080/health
-
-# Check MCP resources
-curl http://localhost:8080/mcp/resources
-
-# Restart VS Code and reload window
-```
+1. Check that `ghcp-memory-context` binary exists in project root
+2. Verify `.vscode/mcp.json` configuration format
+3. Restart VS Code and reload window
+4. Check VS Code Developer Console for MCP errors
 
 **Issue: Memory commands not working**
 1. Verify GitHub Copilot Premium subscription
-2. Check VS Code extension versions
-3. Ensure MCP configuration is properly formatted
-4. Restart the memory context server
+2. Check VS Code extension versions are up to date
+3. Ensure MCP configuration uses correct `stdio` transport
+4. Test manually: `echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | ./ghcp-memory-context --mcp-stdio`
+
+**Issue: Binary not found**
+```bash
+# Build the binary
+make build
+
+# Test it works
+./ghcp-memory-context --help
+```
 
 ## Alternative Editor Setup
 
