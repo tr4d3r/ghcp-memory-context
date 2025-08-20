@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/tr4d3r/ghcp-memory-context/internal/models"
 	"github.com/tr4d3r/ghcp-memory-context/internal/storage"
+	"github.com/tr4d3r/ghcp-memory-context/pkg/types"
 )
 
 // FileStore implements file-based storage for entities and relations
@@ -353,4 +355,170 @@ func (fs *FileStore) ClearCache() {
 
 	fs.entityCache = make(map[string]*models.Entity)
 	fs.relationCache = &models.RelationSet{Relations: make([]models.Relation, 0)}
+}
+
+// Storage interface implementation
+
+// Connect initializes the storage (for file storage, this is already done in Initialize)
+func (fs *FileStore) Connect(ctx context.Context) error {
+	return fs.Initialize()
+}
+
+// Close closes the storage connection (no-op for file storage)
+func (fs *FileStore) Close() error {
+	return nil
+}
+
+// Ping checks if the storage is accessible
+func (fs *FileStore) Ping(ctx context.Context) error {
+	// Check if we can read the base directory
+	_, err := os.Stat(fs.baseDir)
+	return err
+}
+
+// BeginTx starts a transaction (no-op for file storage, returns a no-op transaction)
+func (fs *FileStore) BeginTx(ctx context.Context) (storage.Transaction, error) {
+	return &NoOpTransaction{store: fs}, nil
+}
+
+// Context store methods (placeholder implementations)
+func (fs *FileStore) CreateContext(ctx context.Context, obj types.ContextObject) error {
+	return fmt.Errorf("context operations not implemented for file storage")
+}
+
+func (fs *FileStore) GetContext(ctx context.Context, id string) (types.ContextObject, error) {
+	return nil, fmt.Errorf("context operations not implemented for file storage")
+}
+
+func (fs *FileStore) UpdateContext(ctx context.Context, obj types.ContextObject) error {
+	return fmt.Errorf("context operations not implemented for file storage")
+}
+
+func (fs *FileStore) DeleteContext(ctx context.Context, id string) error {
+	return fmt.Errorf("context operations not implemented for file storage")
+}
+
+func (fs *FileStore) ListContexts(ctx context.Context, filter storage.ContextFilter) ([]types.ContextObject, error) {
+	return nil, fmt.Errorf("context operations not implemented for file storage")
+}
+
+// Session store methods (placeholder implementations)
+func (fs *FileStore) CreateSession(ctx context.Context, session *storage.Session) error {
+	return fmt.Errorf("session operations not implemented for file storage")
+}
+
+func (fs *FileStore) GetSession(ctx context.Context, id string) (*storage.Session, error) {
+	return nil, fmt.Errorf("session operations not implemented for file storage")
+}
+
+func (fs *FileStore) UpdateSession(ctx context.Context, session *storage.Session) error {
+	return fmt.Errorf("session operations not implemented for file storage")
+}
+
+func (fs *FileStore) DeleteSession(ctx context.Context, id string) error {
+	return fmt.Errorf("session operations not implemented for file storage")
+}
+
+func (fs *FileStore) ListSessions(ctx context.Context, filter storage.SessionFilter) ([]*storage.Session, error) {
+	return nil, fmt.Errorf("session operations not implemented for file storage")
+}
+
+func (fs *FileStore) CleanupExpiredSessions(ctx context.Context, olderThan time.Duration) error {
+	return fmt.Errorf("session operations not implemented for file storage")
+}
+
+// NoOpTransaction represents a no-operation transaction for file storage
+type NoOpTransaction struct {
+	store *FileStore
+}
+
+func (tx *NoOpTransaction) Commit() error {
+	return nil
+}
+
+func (tx *NoOpTransaction) Rollback() error {
+	return nil
+}
+
+// Delegate all operations to the underlying store
+func (tx *NoOpTransaction) CreateEntity(ctx context.Context, entity *models.Entity) error {
+	return tx.store.CreateEntity(ctx, entity)
+}
+
+func (tx *NoOpTransaction) GetEntity(ctx context.Context, name string) (*models.Entity, error) {
+	return tx.store.GetEntity(ctx, name)
+}
+
+func (tx *NoOpTransaction) UpdateEntity(ctx context.Context, entity *models.Entity) error {
+	return tx.store.UpdateEntity(ctx, entity)
+}
+
+func (tx *NoOpTransaction) DeleteEntity(ctx context.Context, name string) error {
+	return tx.store.DeleteEntity(ctx, name)
+}
+
+func (tx *NoOpTransaction) ListEntities(ctx context.Context, entityType string) ([]*models.Entity, error) {
+	return tx.store.ListEntities(ctx, entityType)
+}
+
+func (tx *NoOpTransaction) EntityExists(name string) bool {
+	return tx.store.EntityExists(name)
+}
+
+func (tx *NoOpTransaction) SearchObservations(ctx context.Context, query string, entityType string) ([]storage.SearchResult, error) {
+	return tx.store.SearchObservations(ctx, query, entityType)
+}
+
+func (tx *NoOpTransaction) GetRelations(ctx context.Context) (*models.RelationSet, error) {
+	return tx.store.GetRelations(ctx)
+}
+
+func (tx *NoOpTransaction) SaveRelations(ctx context.Context, relations *models.RelationSet) error {
+	return tx.store.SaveRelations(ctx, relations)
+}
+
+// Context operations (not implemented)
+func (tx *NoOpTransaction) CreateContext(ctx context.Context, obj types.ContextObject) error {
+	return tx.store.CreateContext(ctx, obj)
+}
+
+func (tx *NoOpTransaction) GetContext(ctx context.Context, id string) (types.ContextObject, error) {
+	return tx.store.GetContext(ctx, id)
+}
+
+func (tx *NoOpTransaction) UpdateContext(ctx context.Context, obj types.ContextObject) error {
+	return tx.store.UpdateContext(ctx, obj)
+}
+
+func (tx *NoOpTransaction) DeleteContext(ctx context.Context, id string) error {
+	return tx.store.DeleteContext(ctx, id)
+}
+
+func (tx *NoOpTransaction) ListContexts(ctx context.Context, filter storage.ContextFilter) ([]types.ContextObject, error) {
+	return tx.store.ListContexts(ctx, filter)
+}
+
+// Session operations (not implemented)
+func (tx *NoOpTransaction) CreateSession(ctx context.Context, session *storage.Session) error {
+	return tx.store.CreateSession(ctx, session)
+}
+
+func (tx *NoOpTransaction) GetSession(ctx context.Context, id string) (*storage.Session, error) {
+	return tx.store.GetSession(ctx, id)
+}
+
+func (tx *NoOpTransaction) UpdateSession(ctx context.Context, session *storage.Session) error {
+	return tx.store.UpdateSession(ctx, session)
+}
+
+func (tx *NoOpTransaction) DeleteSession(ctx context.Context, id string) error {
+	return tx.store.DeleteSession(ctx, id)
+}
+
+func (tx *NoOpTransaction) ListSessions(ctx context.Context, filter storage.SessionFilter) ([]*storage.Session, error) {
+	return tx.store.ListSessions(ctx, filter)
+}
+
+func (tx *NoOpTransaction) CleanupExpiredSessions(ctx context.Context, olderThan time.Duration) error {
+	return tx.store.CleanupExpiredSessions(ctx, olderThan)
 }
