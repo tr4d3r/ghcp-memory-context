@@ -146,9 +146,18 @@ func TestListEntities(t *testing.T) {
 	entity2 := models.NewEntity("patterns", "pattern")
 	entity3 := models.NewEntity("decisions", "guideline")
 
-	fs.CreateEntity(ctx, entity1)
-	fs.CreateEntity(ctx, entity2)
-	fs.CreateEntity(ctx, entity3)
+	err := fs.CreateEntity(ctx, entity1)
+	if err != nil {
+		t.Fatalf("Failed to create entity1: %v", err)
+	}
+	err = fs.CreateEntity(ctx, entity2)
+	if err != nil {
+		t.Fatalf("Failed to create entity2: %v", err)
+	}
+	err = fs.CreateEntity(ctx, entity3)
+	if err != nil {
+		t.Fatalf("Failed to create entity3: %v", err)
+	}
 
 	// List all entities
 	allEntities, err := fs.ListEntities(ctx, "")
@@ -186,8 +195,14 @@ func TestSearchObservations(t *testing.T) {
 	entity2.AddObservation("use REST API endpoints")
 	entity2.AddObservation("implement commit hooks")
 
-	fs.CreateEntity(ctx, entity1)
-	fs.CreateEntity(ctx, entity2)
+	err := fs.CreateEntity(ctx, entity1)
+	if err != nil {
+		t.Fatalf("Failed to create entity1: %v", err)
+	}
+	err = fs.CreateEntity(ctx, entity2)
+	if err != nil {
+		t.Fatalf("Failed to create entity2: %v", err)
+	}
 
 	// Search for "commit"
 	results, err := fs.SearchObservations(ctx, "commit", "")
@@ -254,7 +269,10 @@ func TestCaching(t *testing.T) {
 
 	// Create entity
 	entity := models.NewEntity("test_cache", "test")
-	fs.CreateEntity(ctx, entity)
+	err := fs.CreateEntity(ctx, entity)
+	if err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
 
 	// First read (from file)
 	entity1, err := fs.GetEntity(ctx, "test_cache")
